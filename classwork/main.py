@@ -13,9 +13,8 @@ from time import perf_counter as pc
 from typ import json as safe_json
 from nats.aio.client import Client as NATS
 from nats.aio.errors import ErrNoServers, ErrTimeout
-from yachalk import chalk
 
-from .utils import hash_str, precision_format_time, importing_script, sanitize_name, get_class_props, RaisingThread, trace_caller
+from .utils import hash_str, precision_format_time, importing_script, sanitize_name, get_class_props, RaisingThread
 
 app_name = "classwork"
 
@@ -33,31 +32,6 @@ class ClassWork:
         exec_file = importing_script()
         hashid = hash_str(f"{exec_file}")
         self.id = f"{app_name}_{mac_id}_{str(hashid)}"
-
-    def __log(self, level="info", *args):
-        id = self.id.replace(f"{app_name}_", "")
-
-        level = level.upper()
-
-        prefix = f"[{level}][{id}]"
-        clr = chalk.gray
-
-        if level in ["SUCCESS"]:
-            clr = chalk.green
-            prefix = chalk.bold.green("✔ " + prefix)
-        if level in ["ERROR"]:
-            clr = chalk.red
-            prefix = chalk.bold.red("✘ " + prefix)
-        if level in ["WARNING"]:
-            clr = chalk.yellow
-            prefix = chalk.bold.yellow("⚠ " + prefix)
-        elif level in ["INFO"]:
-            clr = chalk.blue
-            prefix = chalk.bold.blue(prefix)
-
-        args = list(map(lambda arg: clr(str(arg)), args))
-
-        print("", prefix, *args)
 
     async def __connect(self):       
         
@@ -110,8 +84,7 @@ class ClassWork:
             return
 
         if nc.is_connected:
-            # print(nc.connected_url)
-            self.__log("info", f"Successfully connected : {nc.connected_url.netloc}")
+            print(f" >> Connection to NATS server [{nc.connected_url.netloc}] established.")
             self.nc = nc
             self.js = nc.jetstream()
 
