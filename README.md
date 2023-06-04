@@ -72,7 +72,7 @@ class_work = ClassWork(nats_url=nats_url)
 
 # Our callback function
 # This is where complete work gets reported
-def report_callback(report_card):
+async def report_callback(report_card):
     print("We have a report!")
     pprint(report_card)
 
@@ -100,7 +100,7 @@ Take note of the following:
 1. `class_work.assign` must be run in async mode. So we have wrapped it in an async method. You can also use `asyncio.run` directly.
 2. Naming your task is very important. This naming convection is unashamedly borrowed from [moleculer](https://moleculer.services/). In this case, your task is **"my_worker.add"**. This will route to any worker class registered with the **name** "my_worker" and method "add". 
 3. Because all this traffic is routed via NATS, your arguments must be JSON serializable. Even though we use [typ](https://github.com/vsapronov/typjson) to handle edge cases like `sets`, beware that there are limits to what you can pass in your arguments
-4. `report_callback` is called with a 'report' of your task. A report card 😊 will look like the one below:
+4. `report_callback` must be async. It is called with a 'report' of your task. A report card 😊 will look like the one below:
 
 
 ```
