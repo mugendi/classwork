@@ -82,10 +82,16 @@ def hash_str(text, hash_length="short"):
 
     return id
 
+
 class __c:
-    __ne__ = 1
+    def __init__(self) -> None:
+        pass
+
 
 default_props = dir(__c)
+
+def is_initialized(testClass):
+    return type(testClass) != type(__c)
 
 def get_class_props(cls):
     props = [

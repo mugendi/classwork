@@ -14,7 +14,7 @@ from typ import json as safe_json
 from nats.aio.client import Client as NATS
 from nats.aio.errors import ErrNoServers, ErrTimeout
 
-from .utils import hash_str, precision_format_time, importing_script, sanitize_name, get_class_props, RaisingThread
+from .utils import hash_str, precision_format_time, importing_script, sanitize_name, get_class_props, RaisingThread, is_initialized
 
 app_name = "classwork"
 
@@ -207,6 +207,11 @@ class ClassWork:
                 pass
 
     async def register(self, name, worker_class):
+
+        # ensure worker class is initialized
+        if not is_initialized(worker_class):
+            raise Exception("worker_class must be initialized before registering it!")
+
         await self.__setup()
         # make & sanitize name
         name = sanitize_name(name)
@@ -324,7 +329,7 @@ class ClassWork:
 
                     del data["call_start"]
 
-                    report_callback(data)
+                    await report_callback(data)
 
                     # acknowledge receipt
                     await msg.ack()
