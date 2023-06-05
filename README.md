@@ -115,7 +115,7 @@ We have a report!
 
 ## Report Explanation
 - **duration:** is a high precision (down to yoctoseconds) report of the time taken.
-    - **latency:** shows the time taken to route your "task **request**" to the worker and "task **response**" back to the scheduler.
+    - **latency:** shows the time taken to route your "task **request**" to the worker and "task **response**" back to the scheduler. It is important to understand that since both worker and scheduler are disconnected, latency may also include delays of either to access the NATS network and thus does not specifically refer to network latency.
 - **req_id:** is a unique id assigned to each job
 - **response:** is the actual value returned by the worker
 
