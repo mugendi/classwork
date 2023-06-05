@@ -101,7 +101,7 @@ Take note of the following:
 2. Naming your task is very important. This naming convection is unashamedly borrowed from [moleculer](https://moleculer.services/). In this case, your task is **"my_worker.add"**. This will route to any worker class registered with the **name** "my_worker" and method "add". 
 3. Because all this traffic is routed via NATS, your arguments must be JSON serializable. Even though we use [typ](https://github.com/vsapronov/typjson) to handle edge cases like `sets`, beware that there are limits to what you can pass in your arguments
 4. `report_callback` must be async. It is called with a 'report' of your task. A report card 😊 will look like the one below:
-
+5. `args` can be passed as a list or dict. They will be treated as `*args` if list and `**kwargs` if dict.
 
 ```
 We have a report!
