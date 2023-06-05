@@ -10,6 +10,7 @@ import uuid
 import nats
 import sys
 import traceback
+from termcolor2 import c
 from time import perf_counter as pc
 from typ import json as safe_json
 from nats.aio.client import Client as NATS
@@ -24,6 +25,7 @@ from .utils import (
     RaisingThread,
     is_initialized,
     trace_report_error,
+    isclass,
 )
 
 app_name = "classwork"
@@ -94,7 +96,9 @@ class ClassWork:
 
         if nc.is_connected:
             print(
-                f" >> Connection to NATS server [{nc.connected_url.netloc}] established."
+                c(
+                    f" >> Connection to NATS server [{nc.connected_url.netloc}] established."
+                ).green.bold
             )
             self.nc = nc
             self.js = nc.jetstream()
@@ -216,7 +220,14 @@ class ClassWork:
                 pass
 
     async def register(self, name, worker_class):
+        # validate values
+        if not isinstance(name, str):
+            raise TypeError(f"name must be a string")
+
         # ensure worker class is initialized
+        if not isclass(worker_class):
+            raise TypeError("worker_class must be a class")
+
         if not is_initialized(worker_class):
             raise Exception("worker_class must be initialized before registering it!")
 
@@ -245,7 +256,13 @@ class ClassWork:
 
                 try:
                     # call worker method and pass args
-                    response = await func(*data["args"])
+                    if isinstance(data["args"], dict):
+                        # **kwargs
+                        response = await func(**data["args"])
+                    elif isinstance(data["args"], list):
+                        # *args                #
+                        response = await func(*data["args"])
+
                 except Exception as e:
                     trace_report_error()
                     # probably exit?
@@ -296,6 +313,16 @@ class ClassWork:
             #     raise e
 
     async def assign(self, task, args, report_callback):
+        # validate values
+        if not isinstance(task, str):
+            raise TypeError(f"task must be a string")
+
+        if not isinstance(args, (list, dict)):
+            raise TypeError(f"args must be a list or dict")
+
+        if not callable(report_callback):
+            raise TypeError(f"report_callback must be a callable method")
+
         await self.__setup()
 
         # make req_id
@@ -338,14 +365,14 @@ class ClassWork:
                         - data["duration"]["latency"]["request"]
                         - data["duration"][task]
                     )
-                    
 
-                    data["duration"][task] = precision_format_time(data["duration"][task] )
+                    data["duration"][task] = precision_format_time(
+                        data["duration"][task]
+                    )
 
                     data["duration"]["latency"]["request"] = precision_format_time(
                         data["duration"]["latency"]["request"]
                     )
-
 
                     del data["call_start"]
 
@@ -353,14 +380,12 @@ class ClassWork:
                         await report_callback(data)
                     except Exception as e:
                         trace_report_error("SCHEDULER/REPORT ERROR!")
-                        # exit
-                        sys.exit()
 
                     # acknowledge receipt
                     await msg.ack()
 
             except Exception as e:
-                # print(e)
+                print(e)
                 raise e
 
         t = RaisingThread(target=self.__get_messages_bg, args=[self.id, handle_message])

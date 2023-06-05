@@ -12,6 +12,7 @@ import traceback
 import threading
 from hashids import Hashids
 from termcolor2 import c
+from pprint import pprint
 
 
 def precision_format_time(seconds, precision=2, last_sep=" and "):
@@ -95,8 +96,13 @@ class __c:
 default_props = dir(__c)
 
 
-def is_initialized(testClass):
-    return type(testClass) != type(__c)
+# check if a class is initialized
+def is_initialized(cls):
+    return isclass(cls) and type(cls) != type(__c)
+
+
+def isclass(var):
+    return str(type(var)).startswith("<class")
 
 
 def get_class_props(cls):
@@ -137,13 +143,9 @@ def trace_caller():
 def trace_report_error(header="WORKER/TASK ERROR!"):
     # format error in running function
     e = traceback.format_exc()
-    # first we split by File tracebacks
-    e = e.split("File ")
-    # We discard index 1 as it points to this file
-    e.pop(1)
 
-    # Then we join back
-    e = "  File ".join(e)
+    ee = re.sub(r"[\w\W]+?in handle_message[^\)]+\)\n", "", e)
+
     # print error now
     print(c(f"\n{header}").red.blink.bold.underline)
-    print(c(f"  {e}").red)
+    print(c(f"  {ee}").red)
