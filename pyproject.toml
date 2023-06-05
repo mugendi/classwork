@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "classwork"
-version = "0.0.6"
+version = "0.0.7"
 description = "A simple Python module to help distribute you tasks across multiple brokers as microservices"
 authors = ["Anthony Mugendi <ngurumugz@gmail.com>"]
 license = "MIT"
@@ -8,7 +8,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-numpy = "1.23.5"
+numpy = "^1.24.3"
 nats-py = "2.2.0"
 hashids = "1.3.1"
 typjson = "0.0.32"
