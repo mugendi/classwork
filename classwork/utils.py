@@ -8,11 +8,13 @@
 import os
 import sys
 import re
+import traceback
 import threading
 from hashids import Hashids
+from termcolor2 import c
 
-def precision_format_time(seconds, precision=2, last_sep = " and "):
 
+def precision_format_time(seconds, precision=2, last_sep=" and "):
     time_dict = {
         "hours": int(seconds // 3600),
         "minutes": int((seconds % 3600) // 60),
@@ -42,19 +44,20 @@ def precision_format_time(seconds, precision=2, last_sep = " and "):
         "zeptoseconds": "zs",
         "yoctoseconds": "ys",
     }
-    
-    
-    time_arr = [f"{val} {time_units[unit]}" for unit, val in time_dict.items() if val>0][0:precision]
+
+    time_arr = [
+        f"{val} {time_units[unit]}" for unit, val in time_dict.items() if val > 0
+    ][0:precision]
 
     time_str = ""
-    
+
     for i, val in enumerate(time_arr):
-        time_str +=  val 
-        if i<len(time_arr)-1:
-            time_str += ", " if i<len(time_arr)-2 else last_sep 
-    
-    
+        time_str += val
+        if i < len(time_arr) - 1:
+            time_str += ", " if i < len(time_arr) - 2 else last_sep
+
     return time_str
+
 
 def importing_script():
     # get working directory
@@ -67,6 +70,7 @@ def importing_script():
     )
 
     return importing_script
+
 
 def hash_str(text, hash_length="short"):
     import hashlib
@@ -90,8 +94,10 @@ class __c:
 
 default_props = dir(__c)
 
+
 def is_initialized(testClass):
     return type(testClass) != type(__c)
+
 
 def get_class_props(cls):
     props = [
@@ -100,22 +106,25 @@ def get_class_props(cls):
 
     return props
 
+
 def sanitize_name(name):
     return re.sub(r"[^\w]", "_", name)
 
-class RaisingThread(threading.Thread):
-  def run(self):
-    self._exc = None
-    try:
-      super().run()
-    except Exception as e:
-      self._exc = e
 
-  def join(self, timeout=None):
-    super().join(timeout=timeout)
-    
-    if self._exc:
-      raise self._exc
+class RaisingThread(threading.Thread):
+    def run(self):
+        self._exc = None
+        try:
+            super().run()
+        except Exception as e:
+            self._exc = e
+
+    def join(self, timeout=None):
+        super().join(timeout=timeout)
+
+        if self._exc:
+            raise self._exc
+
 
 def trace_caller():
     try:
@@ -123,3 +132,18 @@ def trace_caller():
     except Exception:
         frame = sys.exc_info()[2].tb_frame.f_back.f_back
         print(" >> invoked by:", frame.f_code.co_name)
+
+
+def trace_report_error(header="WORKER/TASK ERROR!"):
+    # format error in running function
+    e = traceback.format_exc()
+    # first we split by File tracebacks
+    e = e.split("File ")
+    # We discard index 1 as it points to this file
+    e.pop(1)
+
+    # Then we join back
+    e = "  File ".join(e)
+    # print error now
+    print(c(f"\n{header}").red.blink.bold.underline)
+    print(c(f"  {e}").red)

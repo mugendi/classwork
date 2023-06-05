@@ -8,13 +8,23 @@ import json
 import asyncio
 import uuid
 import nats
-
+import sys
+import traceback
 from time import perf_counter as pc
 from typ import json as safe_json
 from nats.aio.client import Client as NATS
 from nats.aio.errors import ErrNoServers, ErrTimeout
 
-from .utils import hash_str, precision_format_time, importing_script, sanitize_name, get_class_props, RaisingThread, is_initialized
+from .utils import (
+    hash_str,
+    precision_format_time,
+    importing_script,
+    sanitize_name,
+    get_class_props,
+    RaisingThread,
+    is_initialized,
+    trace_report_error,
+)
 
 app_name = "classwork"
 
@@ -33,10 +43,9 @@ class ClassWork:
         hashid = hash_str(f"{exec_file}")
         self.id = f"{app_name}_{mac_id}_{str(hashid)}"
 
-    async def __connect(self):       
-        
+    async def __connect(self):
         # trace_caller()
-    
+
         # Setup pool of servers from a NATS cluster.
         options = {
             "servers": self.nats_url
@@ -84,12 +93,13 @@ class ClassWork:
             return
 
         if nc.is_connected:
-            print(f" >> Connection to NATS server [{nc.connected_url.netloc}] established.")
+            print(
+                f" >> Connection to NATS server [{nc.connected_url.netloc}] established."
+            )
             self.nc = nc
             self.js = nc.jetstream()
 
             return self.nc, self.js
-        
 
     async def __add_stream(self, stream_name, subjects):
         # print(f"{stream_name=}, {subjects=}")
@@ -174,7 +184,6 @@ class ClassWork:
         asyncio.run(self.__get_messages(subject, cb))
 
     async def __get_messages(self, subject, cb):
-        
         # _, self.jss = await connect_client(self.nats_url)
         await self.__connect()
 
@@ -207,7 +216,6 @@ class ClassWork:
                 pass
 
     async def register(self, name, worker_class):
-
         # ensure worker class is initialized
         if not is_initialized(worker_class):
             raise Exception("worker_class must be initialized before registering it!")
@@ -225,37 +233,49 @@ class ClassWork:
             await self.__connect()
 
         async def handle_message(msg):
-            subject = msg.subject
-            data = json.loads(msg.data.decode())
-            _, prop = subject.split(".")
-            func = getattr(worker_class, prop)
+            try:
+                subject = msg.subject
+                data = json.loads(msg.data.decode())
+                _, prop = subject.split(".")
+                func = getattr(worker_class, prop)
 
-            # calc latency
-            latency = pc() - data["call_start"]
-            # call worker method and pass args
-            response = await func(*data["args"])
-            # calculate total time
-            duration = pc() - data["call_start"] - latency
+                # print(data)
+                # calc latency
+                latency = pc() - data["call_start"]
 
-            # compose payload
-            payload = {
-                "response": response,
-                "task": subject,
-                # "args": data["args"],
-                "req_id": data["req_id"],
-                "call_start": data["call_start"],
-                "duration": {
-                    "latency": {"request": latency},
-                    f"{subject}": precision_format_time(duration),
-                },
-            }
+                try:
+                    # call worker method and pass args
+                    response = await func(*data["args"])
+                except Exception as e:
+                    trace_report_error()
+                    # probably exit?
+                    sys.exit()
+                # calculate total time
+                duration = pc() - data["call_start"] - latency
 
-            ack = await self.js.publish(
-                data["reply"], safe_json.dumps(payload).encode()
-            )
+                # compose payload
+                payload = {
+                    "response": response,
+                    "task": subject,
+                    # "args": data["args"],
+                    "req_id": data["req_id"],
+                    "call_start": data["call_start"],
+                    "duration": {
+                        "latency": {"request": latency},
+                        f"{subject}": precision_format_time(duration),
+                    },
+                }
 
-            # acknowledge msg receipt
-            await msg.ack()
+                ack = await self.js.publish(
+                    data["reply"], safe_json.dumps(payload).encode()
+                )
+
+                # acknowledge msg receipt
+                await msg.ack()
+
+            except:
+                traceback.print_exc()
+                sys.exit()
 
         for i, subject in enumerate(subjects):
             # make stream name
@@ -263,8 +283,7 @@ class ClassWork:
 
             # make stream
             await self.__add_stream(stream_name=stream_name, subjects=[subject])
-            
-            
+
             t = RaisingThread(
                 target=self.__get_messages_bg, args=[subject, handle_message]
             )
@@ -304,23 +323,21 @@ class ClassWork:
 
         ack = await self.js.publish(task, safe_json.dumps(payload).encode())
         # print(ack)
-        
+
         async def handle_message(msg):
-            
             try:
                 # print(msg)
                 if report_callback and callable(report_callback):
                     # subject = msg.subject
                     data = json.loads(msg.data.decode())
-                    
+
                     # data["duration"]["request_latency"]
                     data["duration"]["latency"]["response"] = precision_format_time(
                         pc()
                         - data["call_start"]
                         - data["duration"]["latency"]["request"]
                     )
-                    
-                    
+
                     # print( data["duration"]["latency"]["request"] )
 
                     data["duration"]["latency"]["request"] = precision_format_time(
@@ -329,7 +346,10 @@ class ClassWork:
 
                     del data["call_start"]
 
-                    await report_callback(data)
+                    try:
+                        await report_callback(data)
+                    except Exception as e:
+                        trace_report_error("SCHEDULER/REPORT ERROR!")
 
                     # acknowledge receipt
                     await msg.ack()
@@ -338,10 +358,7 @@ class ClassWork:
                 # print(e)
                 raise e
 
-            
         t = RaisingThread(target=self.__get_messages_bg, args=[self.id, handle_message])
         t.start()
-        
-        
 
         # await __clear_streams()
