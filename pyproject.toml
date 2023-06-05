@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "classwork"
-version = "0.0.5"
+version = "0.0.6"
 description = "A simple Python module to help distribute you tasks across multiple brokers as microservices"
 authors = ["Anthony Mugendi <ngurumugz@gmail.com>"]
 license = "MIT"
