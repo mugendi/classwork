@@ -262,7 +262,7 @@ class ClassWork:
                     "call_start": data["call_start"],
                     "duration": {
                         "latency": {"request": latency},
-                        f"{subject}": precision_format_time(duration),
+                        f"{subject}": duration,
                     },
                 }
 
@@ -336,13 +336,16 @@ class ClassWork:
                         pc()
                         - data["call_start"]
                         - data["duration"]["latency"]["request"]
+                        - data["duration"][task]
                     )
+                    
 
-                    # print( data["duration"]["latency"]["request"] )
+                    data["duration"][task] = precision_format_time(data["duration"][task] )
 
                     data["duration"]["latency"]["request"] = precision_format_time(
                         data["duration"]["latency"]["request"]
                     )
+
 
                     del data["call_start"]
 
