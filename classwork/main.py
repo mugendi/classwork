@@ -350,6 +350,8 @@ class ClassWork:
                         await report_callback(data)
                     except Exception as e:
                         trace_report_error("SCHEDULER/REPORT ERROR!")
+                        # exit
+                        sys.exit()
 
                     # acknowledge receipt
                     await msg.ack()
